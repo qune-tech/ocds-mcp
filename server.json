@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.qune-tech/ocds-mcp",
+  "title": "OCDS German Procurement Search",
+  "description": "Search and match German public procurement tenders (OCDS) from your local LLM.",
+  "version": "0.1.0",
+  "websiteUrl": "https://vergabe-dashboard.qune.de",
+  "repository": {
+    "url": "https://github.com/qune-tech/ocds-mcp",
+    "source": "github"
+  }
+}
