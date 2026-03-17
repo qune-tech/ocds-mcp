@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: ocds-mcp
+            asset: ocds-mcp-linux-x86_64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary: ocds-mcp
+            asset: ocds-mcp-macos-arm64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary: ocds-mcp.exe
+            asset: ocds-mcp-windows-x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p ocds-mcp
+
+      - name: Package (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} ${{ matrix.asset }}
+          tar czf ${{ matrix.asset }}.tar.gz ${{ matrix.asset }}
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} ${{ matrix.asset }}.exe
+          7z a ${{ matrix.asset }}.zip ${{ matrix.asset }}.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}.*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            ocds-mcp-linux-x86_64.tar.gz
+            ocds-mcp-macos-arm64.tar.gz
+            ocds-mcp-windows-x86_64.zip

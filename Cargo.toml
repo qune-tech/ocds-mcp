@@ -1,0 +1,51 @@
+[package]
+name = "ocds-mcp"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP
+reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "system-proxy", "rustls-tls", "json"] }
+chrono = "0.4"
+
+# Identity
+uuid = { version = "1", features = ["v4"] }
+
+# Vector search
+rusqlite = { version = "0.33", features = ["bundled"] }
+bytemuck = "1"
+
+# ML
+ort = { version = "2.0.0-rc.11", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs"] }
+tokenizers = "0.22"
+
+# MCP
+rmcp = { version = "0.15", features = ["server", "macros", "transport-io"] }
+
+[dev-dependencies]
+tempfile = "3.5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+debug = false
+strip = "symbols"
