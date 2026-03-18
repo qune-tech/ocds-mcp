@@ -35,7 +35,7 @@ rusqlite = { version = "0.33", features = ["bundled"] }
 bytemuck = "1"
 
 # ML
-ort = { version = "2.0.0-rc.11", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs"] }
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "copy-dylibs"] }
 tokenizers = "0.22"
 
 # MCP
