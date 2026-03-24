@@ -4,6 +4,8 @@ MCP server for German public procurement data (OCDS). Connects your AI assistant
 
 Your company profiles never leave your machine — only embedding vectors are sent to the API. GDPR-compliant by design.
 
+[![qune-tech/ocds-mcp MCP server](https://glama.ai/mcp/servers/qune-tech/ocds-mcp/badges/card.svg)](https://glama.ai/mcp/servers/qune-tech/ocds-mcp)
+
 ## Quick Start
 
 ### 1. Get an API key
