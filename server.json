@@ -6,7 +6,24 @@
   "version": "0.1.0",
   "websiteUrl": "https://vergabe-dashboard.qune.de",
   "repository": {
+    "type": "git",
     "url": "https://github.com/qune-tech/ocds-mcp",
     "source": "github"
-  }
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@qune-tech/ocds-mcp",
+      "version": "0.3.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "OCDS_API_KEY",
+          "description": "API key (sk_live_...) from https://vergabe-dashboard.qune.de/app/api-keys",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
 }

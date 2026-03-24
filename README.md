@@ -12,7 +12,13 @@ Sign up at [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) and cr
 
 ### 2. Install
 
-**Download pre-built binary** from [GitHub Releases](https://github.com/qune-tech/ocds-mcp/releases/latest):
+**Via npx** (easiest — downloads the correct binary automatically):
+
+```bash
+npx @qune-tech/ocds-mcp --api-key sk_live_YOUR_KEY_HERE
+```
+
+**Or download pre-built binary** from [GitHub Releases](https://github.com/qune-tech/ocds-mcp/releases/latest):
 
 | Platform | Download |
 |----------|----------|
@@ -43,6 +49,19 @@ cargo build --release
 
 **Claude Desktop** — edit `claude_desktop_config.json`:
 
+Using npx:
+```json
+{
+  "mcpServers": {
+    "ocds": {
+      "command": "npx",
+      "args": ["-y", "@qune-tech/ocds-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
+    }
+  }
+}
+```
+
+Using the binary directly:
 ```json
 {
   "mcpServers": {
@@ -56,6 +75,19 @@ cargo build --release
 
 **Claude Code** — add `.mcp.json` to your project root:
 
+Using npx:
+```json
+{
+  "mcpServers": {
+    "ocds": {
+      "command": "npx",
+      "args": ["-y", "@qune-tech/ocds-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
+    }
+  }
+}
+```
+
+Using the binary directly:
 ```json
 {
   "mcpServers": {
@@ -69,6 +101,11 @@ cargo build --release
 
 **Cursor** — Settings → MCP Servers → Add:
 
+Using npx:
+- Command: `npx`
+- Args: `-y @qune-tech/ocds-mcp --api-key sk_live_YOUR_KEY_HERE`
+
+Using the binary directly:
 - Command: `ocds-mcp`
 - Args: `--api-key sk_live_YOUR_KEY_HERE`
 
@@ -76,9 +113,17 @@ cargo build --release
 
 1. Click **+ Add Server** and choose **STDIO**
 2. Fill in:
+
+Using npx:
+   - Name: `ocds`
+   - Command: `npx`
+   - Arguments: `-y @qune-tech/ocds-mcp --api-key sk_live_YOUR_KEY_HERE`
+
+Using the binary directly:
    - Name: `ocds`
    - Command: full path to the binary, e.g. `/usr/local/bin/ocds-mcp`
    - Arguments: `--api-key sk_live_YOUR_KEY_HERE`
+
 3. Click **Save**
 4. In the chat, select a model that supports tool use and enable the `ocds` server
 
