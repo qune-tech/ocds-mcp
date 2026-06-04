@@ -1,8 +1,16 @@
 [package]
-name = "ocds-mcp"
-version = "0.4.0"
+name = "vergabe-mcp"
+version = "0.5.0"
 edition = "2024"
 license = "MIT"
+
+[lib]
+name = "vergabe_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vergabe-mcp"
+path = "src/main.rs"
 
 [dependencies]
 # Serialization
@@ -25,7 +33,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # HTTP
 reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "system-proxy", "rustls-tls", "json"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 
 # Identity
 uuid = { version = "1", features = ["v4"] }

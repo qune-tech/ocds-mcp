@@ -12,7 +12,7 @@ Apache-2.0 OR MIT OR Zlib (6): bytemuck, lru-slab, macro_rules_attribute, macro_
 BSD-3-Clause (1): subtle
 CDLA-Permissive-2.0 (1): webpki-roots
 ISC (2): rustls-webpki, untrusted
-MIT (49): bytes, castaway, compact_str, console, darling, darling, darling_core, darling_core, darling_macro, darling_macro, h2, http-body, http-body-util, hyper, hyper-util, indicatif, libsqlite3-sys, matchers, mio, nom, nu-ansi-term, ocds-mcp, onig, onig_sys, redox_syscall, rusqlite, schemars, schemars_derive, sharded-slab, slab, strsim, synstructure, tokio, tokio-macros, tokio-util, tower, tower-http, tower-layer, tower-service, tracing, tracing-attributes, tracing-core, tracing-log, tracing-subscriber, try-lock, unit-prefix, valuable, want, zmij
+MIT (49): bytes, castaway, compact_str, console, darling, darling, darling_core, darling_core, darling_macro, darling_macro, h2, http-body, http-body-util, hyper, hyper-util, indicatif, libsqlite3-sys, matchers, mio, nom, nu-ansi-term, onig, onig_sys, redox_syscall, rusqlite, schemars, schemars_derive, sharded-slab, slab, strsim, synstructure, tokio, tokio-macros, tokio-util, tower, tower-http, tower-layer, tower-service, tracing, tracing-attributes, tracing-core, tracing-log, tracing-subscriber, try-lock, unit-prefix, valuable, vergabe-mcp, want, zmij
 MIT OR Unlicense (3): aho-corasick, byteorder, memchr
 Unicode-3.0 (18): icu_collections, icu_locale_core, icu_normalizer, icu_normalizer_data, icu_properties, icu_properties_data, icu_provider, litemap, potential_utf, tinystr, writeable, yoke, yoke-derive, zerofrom, zerofrom-derive, zerotrie, zerovec, zerovec-derive
 Zlib (1): foldhash

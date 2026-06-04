@@ -14,16 +14,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            binary: ocds-mcp
-            asset: ocds-mcp-linux-x86_64
+            binary: vergabe-mcp
+            asset: vergabe-mcp-linux-x86_64
           - target: aarch64-apple-darwin
             os: macos-latest
-            binary: ocds-mcp
-            asset: ocds-mcp-macos-arm64
+            binary: vergabe-mcp
+            asset: vergabe-mcp-macos-arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            binary: ocds-mcp.exe
-            asset: ocds-mcp-windows-x86_64
+            binary: vergabe-mcp.exe
+            asset: vergabe-mcp-windows-x86_64
 
     runs-on: ${{ matrix.os }}
 
@@ -35,21 +35,21 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} -p ocds-mcp
+        run: cargo build --release --target ${{ matrix.target }} -p vergabe-mcp
 
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          cp target/${{ matrix.target }}/release/${{ matrix.binary }} ocds-mcp
-          tar czf ${{ matrix.asset }}.tar.gz ocds-mcp
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} vergabe-mcp
+          tar czf ${{ matrix.asset }}.tar.gz vergabe-mcp
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
-          cp target/${{ matrix.target }}/release/${{ matrix.binary }} ocds-mcp.exe
-          7z a ${{ matrix.asset }}.zip ocds-mcp.exe
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} vergabe-mcp.exe
+          7z a ${{ matrix.asset }}.zip vergabe-mcp.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -70,6 +70,6 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            ocds-mcp-linux-x86_64.tar.gz
-            ocds-mcp-macos-arm64.tar.gz
-            ocds-mcp-windows-x86_64.zip
+            vergabe-mcp-linux-x86_64.tar.gz
+            vergabe-mcp-macos-arm64.tar.gz
+            vergabe-mcp-windows-x86_64.zip

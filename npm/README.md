@@ -1,20 +1,20 @@
-<!-- mcp-name: io.github.qune-tech/ocds-mcp -->
+<!-- mcp-name: io.github.qune-tech/vergabe-mcp -->
 
-# @qune-tech/ocds-mcp
+# @qune-tech/vergabe-mcp
 
-MCP server for German public procurement data (OCDS). Connects your AI assistant to the [Vergabe Dashboard](https://vergabe-dashboard.qune.de) API for semantic search, tender matching, and company profile management.
+Local MCP server for German public procurement search. Connects your AI assistant to the [Vergabe Dashboard](https://vergabe-dashboard.qune.de) API for semantic search, tender matching, and company-profile management.
 
-Company profiles never leave your machine. GDPR-compliant by design.
+Your queries and company profiles never leave your machine — they are embedded locally and only the resulting vectors are sent. Data minimisation by design.
 
 ## Quick Start
 
 ```bash
-npx @qune-tech/ocds-mcp --api-key sk_live_YOUR_KEY_HERE
+npx @qune-tech/vergabe-mcp --api-key sk_live_YOUR_KEY_HERE
 ```
 
 ### Get an API key
 
-Sign up at [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) and create an API key (MCP or Enterprise plan required).
+Sign up at [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) and create an API key. API keys require an active **Enterprise plan**.
 
 ## Configure your AI client
 
@@ -25,9 +25,9 @@ Edit `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "ocds": {
+    "vergabe": {
       "command": "npx",
-      "args": ["-y", "@qune-tech/ocds-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
+      "args": ["-y", "@qune-tech/vergabe-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
     }
   }
 }
@@ -40,9 +40,9 @@ Add `.mcp.json` to your project root:
 ```json
 {
   "mcpServers": {
-    "ocds": {
+    "vergabe": {
       "command": "npx",
-      "args": ["-y", "@qune-tech/ocds-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
+      "args": ["-y", "@qune-tech/vergabe-mcp", "--api-key", "sk_live_YOUR_KEY_HERE"]
     }
   }
 }
@@ -53,37 +53,46 @@ Add `.mcp.json` to your project root:
 Settings > MCP Servers > Add:
 
 - Command: `npx`
-- Args: `-y @qune-tech/ocds-mcp --api-key sk_live_YOUR_KEY_HERE`
+- Args: `-y @qune-tech/vergabe-mcp --api-key sk_live_YOUR_KEY_HERE`
 
-## Available Tools
+### LM Studio
+
+Settings > MCP > Add Server (STDIO):
+
+- Name: `vergabe`
+- Command: `npx`
+- Arguments: `-y @qune-tech/vergabe-mcp --api-key sk_live_YOUR_KEY_HERE`
+
+## Available Tools (11)
 
 | Tool | Description |
 |------|-------------|
-| `search_text` | Semantic search across all tenders |
-| `list_releases` | Filter and browse tenders by month, CPV code, category, value range |
-| `get_release` | Full tender details by OCID |
-| `get_index_info` | Database statistics and connectivity check |
-| `create_company_profile` | Create a matching profile for your company |
+| `search_text` | Semantic search across all tenders (query embedded locally) |
+| `list_releases` | Filter and browse tenders by phase, CPV prefix, country, value range, deadline, buyer, procurement method |
+| `get_release` | Raw eForms XML envelope for one OCID (optional `notice_id` selects a sibling) |
+| `linked_notices` | A procurement's notice lineage (PIN→CN→CAN) as `{ocid, notice_id}` refs |
+| `get_index_info` | API health/version, embedder status, and embedding-contract check |
+| `create_company_profile` | Create a matching profile for your company (stored locally) |
 | `update_company_profile` | Update an existing profile |
 | `get_company_profile` | View profile details |
 | `list_company_profiles` | List all your profiles |
 | `delete_company_profile` | Delete a profile |
-| `match_tenders` | Match a profile against all tenders with semantic similarity |
+| `match_tenders` | Match a profile against all tenders by semantic similarity (vector embedded locally) |
 
 ## How It Works
 
 The npm package downloads the correct platform-native binary on install. No Node.js runtime dependency for the actual MCP server.
 
 ```
-LLM <--stdio--> ocds-mcp (local binary)
-                   |  Local: company profiles + sentence embedder
-                   |  Remote: searches, release queries
-                   +--HTTPS--> Vergabe Dashboard API
+LLM <--stdio--> vergabe-mcp (local binary)
+                   |  Local: company profiles (SQLite) + sentence embedder (ONNX)
+                   |  HTTPS: vectors, OCIDs, filter values, API key
+                   +--HTTPS--> Vergabe Dashboard API (/api/v1)
 ```
 
 - Company profiles are stored locally (never leave your machine).
-- Text embeddings are computed locally (multilingual-e5-small ONNX model, ~118 MB, auto-downloaded on first run).
-- Only embedding vectors are sent to the API for search and matching.
+- Text embeddings are computed locally (multilingual-e5-small ONNX model, ~118 MB, downloaded from huggingface.co on first run, cached afterwards).
+- Only embedding vectors, the OCIDs you fetch, filter values, and your API key are sent to the API.
 
 ## Supported Platforms
 
@@ -95,8 +104,8 @@ LLM <--stdio--> ocds-mcp (local binary)
 
 ## Requirements
 
-- An API key from [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de)
-- ~200 MB disk space for the ONNX model (auto-downloaded on first run)
+- An API key from [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) on an Enterprise plan
+- ~120 MB disk space for the ONNX model (auto-downloaded on first run)
 - Internet connection to reach the API
 
 ## License

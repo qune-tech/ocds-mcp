@@ -33,61 +33,75 @@ pub struct CompanyProfileSummary {
 ///
 /// Embeddings are stored as little-endian f32 BLOBs directly in the
 /// `company_profiles` table, avoiding the need for the sqlite-vec extension.
+///
+/// A `meta` table records the embedding contract version under which the
+/// stored embeddings were written. On open, if that marker differs from
+/// the current contract (e.g. the Query→Passage prefix switch in 0.5.0),
+/// every stored embedding is cleared so it is re-embedded from the retained
+/// `description` against the current contract on first use.
 pub struct ProfileDb {
     conn: Connection,
 }
 
 impl ProfileDb {
-    /// Open (or create) the profile database at `path`.
-    ///
-    /// Handles migration from the old `VecDb`-created schema:
-    /// - If the table has `has_embedding INTEGER` but no `embedding BLOB`, adds
-    ///   the column. Old embeddings in `vec_profiles` are lost (can't read
-    ///   without sqlite-vec), but profile data is preserved.
-    pub fn open(path: &str) -> Result<Self> {
+    /// Open (or create) the profile database at `path`, reconciling the
+    /// stored embeddings against `contract_version`. Any embedding written
+    /// under a different contract is cleared (the `description` is retained
+    /// for lazy re-embed).
+    pub fn open(path: &str, contract_version: u32) -> Result<Self> {
         let conn = Connection::open(path).context("opening profile database")?;
 
-        // Check if company_profiles table exists
-        let table_exists: bool = conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='company_profiles')",
-            [],
-            |row| row.get(0),
-        )?;
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS company_profiles (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                cpv_codes TEXT,
+                categories TEXT,
+                location TEXT,
+                created_at TEXT NOT NULL,
+                embedding BLOB
+            );
+            CREATE TABLE IF NOT EXISTS meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );",
+        )
+        .context("creating tables")?;
 
-        if !table_exists {
-            // Fresh DB — create with new schema
-            conn.execute_batch(
-                "CREATE TABLE company_profiles (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    cpv_codes TEXT,
-                    categories TEXT,
-                    location TEXT,
-                    created_at TEXT NOT NULL,
-                    embedding BLOB
-                );",
+        let db = Self { conn };
+        db.reconcile_embedding_contract(contract_version)?;
+        Ok(db)
+    }
+
+    /// If the stored embedding-contract marker differs from
+    /// `contract_version`, clear all stored embeddings and stamp the new
+    /// version. Vectors written under the old contract are not comparable
+    /// to the index, so they must be re-embedded.
+    fn reconcile_embedding_contract(&self, contract_version: u32) -> Result<()> {
+        let stored: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'embedding_contract_version'",
+                [],
+                |row| row.get(0),
             )
-            .context("creating company_profiles table")?;
-        } else {
-            // Existing table — check if embedding column exists
-            let has_embedding_col: bool = conn
-                .prepare("PRAGMA table_info(company_profiles)")?
-                .query_map([], |row| row.get::<_, String>(1))?
-                .filter_map(|r| r.ok())
-                .any(|name| name == "embedding");
+            .ok();
+        let stored = stored.and_then(|s| s.parse::<u32>().ok());
 
-            if !has_embedding_col {
-                // Old schema — migrate: add embedding BLOB column.
-                // Old embeddings in vec_profiles are lost (needs sqlite-vec to read).
-                conn.execute_batch(
-                    "ALTER TABLE company_profiles ADD COLUMN embedding BLOB;",
+        if stored != Some(contract_version) {
+            self.conn
+                .execute("UPDATE company_profiles SET embedding = NULL", [])
+                .context("clearing stale embeddings")?;
+            self.conn
+                .execute(
+                    "INSERT INTO meta (key, value) VALUES ('embedding_contract_version', ?1)
+                     ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    rusqlite::params![contract_version.to_string()],
                 )
-                .context("migrating: adding embedding column")?;
-            }
+                .context("stamping embedding contract version")?;
         }
-
-        Ok(Self { conn })
+        Ok(())
     }
 
     pub fn create_company_profile(

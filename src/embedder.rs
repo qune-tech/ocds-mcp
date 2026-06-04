@@ -2,11 +2,15 @@
 Sentence embedder using ONNX Runtime (multilingual-e5-small, 384-dim).
 
 Model files are auto-downloaded from HuggingFace on first use (~118MB cached to
-`~/.cache/ocds/models/multilingual-e5-small/`).
+`~/.cache/vergabe/models/multilingual-e5-small/`).
 
-This model requires a `"query: "` or `"passage: "` prefix on all inputs:
-- **Passage**: tender chunks being indexed
-- **Query**: search queries and company profile descriptions being matched against tenders
+This model requires a `"query: "` or `"passage: "` prefix on all inputs.
+The prefix is a property of the route the resulting vector is sent to
+(see `docs/architecture/vector-api.md` in the backend):
+- **Query**: search queries → `POST /api/v1/search/vector`.
+- **Passage**: profile descriptions → `POST /api/v1/match/vector`, so a
+  locally-embedded profile produces the same vector as the server's
+  stored profile (which uses the passage prefix).
 */
 
 use std::path::{Path, PathBuf};
@@ -26,7 +30,12 @@ pub enum EmbedderError {
     Join(#[from] JoinError),
 }
 
-const MODEL_ID: &str = "intfloat/multilingual-e5-small";
+/// The embedding contract this client speaks. MUST match the backend's
+/// `embedding_model` + `embedding_contract` on `GET /api/v1/version`
+/// (see `docs/architecture/vector-api.md`). `get_index_info` reports the
+/// comparison.
+pub const MODEL_ID: &str = "intfloat/multilingual-e5-small";
+pub const EMBEDDING_CONTRACT_VERSION: u32 = 1;
 const MODEL_URL: &str = "https://huggingface.co/intfloat/multilingual-e5-small/resolve/main/onnx/model.onnx";
 const TOKENIZER_URL: &str = "https://huggingface.co/intfloat/multilingual-e5-small/resolve/main/tokenizer.json";
 pub const EMBEDDING_DIM: usize = 384;
@@ -36,9 +45,11 @@ const MAX_LENGTH: usize = 512;
 /// multilingual-e5-small requires a `"query: "` or `"passage: "` prefix.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextType {
-    /// Search queries and company profile descriptions.
+    /// Search queries → `POST /api/v1/search/vector`.
     Query,
-    /// Tender chunks being indexed.
+    /// Company profile descriptions → `POST /api/v1/match/vector`. Matches
+    /// the server's stored-profile (passage) convention so a locally
+    /// embedded profile ranks identically to the hosted one.
     Passage,
 }
 
@@ -51,7 +62,7 @@ pub struct SentenceEmbedder {
 fn cache_dir() -> Result<PathBuf, EmbedderError> {
     let home = std::env::var("HOME")
         .map_err(|_| EmbedderError::Model("HOME environment variable not set".into()))?;
-    Ok(PathBuf::from(home).join(".cache/ocds/models/multilingual-e5-small"))
+    Ok(PathBuf::from(home).join(".cache/vergabe/models/multilingual-e5-small"))
 }
 
 const MAX_RETRIES: u32 = 3;

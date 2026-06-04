@@ -48,7 +48,7 @@ pub async fn create_company_profile(
     // Embed description if embedder is available
     let mut embedded = false;
     if let Some(embedder) = state.embedder.get() {
-        match embedder.embed_text(&params.description, TextType::Query).await {
+        match embedder.embed_text(&params.description, TextType::Passage).await {
             Ok(embedding) => {
                 if let Ok(db) = super::lock_db(state) {
                     if let Err(e) = db.set_profile_embedding(&id, &embedding) {
@@ -108,7 +108,7 @@ pub async fn update_company_profile(
     let mut re_embedded = false;
     if description_changed {
         if let (Some(embedder), Some(desc)) = (state.embedder.get(), &new_description) {
-            match embedder.embed_text(desc, TextType::Query).await {
+            match embedder.embed_text(desc, TextType::Passage).await {
                 Ok(embedding) => {
                     if let Ok(db) = super::lock_db(state) {
                         if let Err(e) = db.set_profile_embedding(&params.id, &embedding) {

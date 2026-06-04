@@ -2,15 +2,18 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
-use ocds_mcp::embedder::SentenceEmbedder;
-use ocds_mcp::server::OcdsMcpServer;
-use ocds_mcp::state::SharedState;
 use rmcp::{ServiceExt, transport::stdio};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use vergabe_mcp::embedder::{EMBEDDING_CONTRACT_VERSION, SentenceEmbedder};
+use vergabe_mcp::server::VergabeMcpServer;
+use vergabe_mcp::state::SharedState;
 
 #[derive(Parser, Debug)]
-#[command(name = "ocds-mcp", about = "MCP server for German public procurement data (Vergabe Dashboard)")]
+#[command(
+    name = "vergabe-mcp",
+    about = "Local MCP server for German public procurement search (Vergabe Dashboard). Embeds queries and profiles locally; only vectors and filter values cross the wire."
+)]
 struct Cli {
     /// Path to the local SQLite database (for company profiles)
     #[arg(long, default_value = "profiles.db")]
@@ -24,14 +27,14 @@ struct Cli {
     #[arg(long, default_value = "https://vergabe-dashboard.qune.de")]
     api_url: String,
 
-    /// API key for authenticating with the API (also reads OCDS_API_KEY env var)
-    #[arg(long, env = "OCDS_API_KEY")]
+    /// API key for authenticating with the API (also reads VERGABE_API_KEY env var)
+    #[arg(long, env = "VERGABE_API_KEY")]
     api_key: Option<String>,
 }
 
 fn init_logging() {
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,ort=warn"));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,ort=warn"));
 
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
@@ -48,9 +51,10 @@ async fn main() -> Result<()> {
     // Ensure data directory exists
     std::fs::create_dir_all(&cli.data_dir)?;
 
-    // Open or create the local database (company profiles)
+    // Open or create the local database (company profiles). Stale
+    // embeddings (older embedding contract) are cleared on open.
     info!("Opening profile database: {}", cli.db);
-    let db = ocds_mcp::profile_db::ProfileDb::open(&cli.db)?;
+    let db = vergabe_mcp::profile_db::ProfileDb::open(&cli.db, EMBEDDING_CONTRACT_VERSION)?;
 
     let http = reqwest::Client::new();
     info!("REST API URL: {}", cli.api_url);
@@ -82,7 +86,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let server = OcdsMcpServer::new(state);
+    let server = VergabeMcpServer::new(state);
     info!("Serving MCP over stdio");
     let service = server.serve(stdio()).await?;
     service.waiting().await?;

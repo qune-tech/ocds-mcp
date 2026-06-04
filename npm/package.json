@@ -1,23 +1,23 @@
 {
-  "name": "@qune-tech/ocds-mcp",
-  "version": "0.4.0",
-  "description": "MCP server for German public procurement data (OCDS). Semantic search, tender matching, and company profile management.",
+  "name": "@qune-tech/vergabe-mcp",
+  "version": "0.5.0",
+  "description": "Local MCP server for German public procurement search (Vergabe Dashboard). Semantic search, tender matching, and company profiles — queries and profiles are embedded locally; only vectors leave the machine.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/qune-tech/ocds-mcp"
+    "url": "https://github.com/qune-tech/vergabe-mcp"
   },
   "homepage": "https://vergabe-dashboard.qune.de",
   "keywords": [
     "mcp",
-    "ocds",
+    "vergabe",
     "procurement",
     "tenders",
-    "vergabe"
+    "eforms"
   ],
-  "mcpName": "io.github.qune-tech/ocds-mcp",
+  "mcpName": "io.github.qune-tech/vergabe-mcp",
   "bin": {
-    "ocds-mcp": "index.js"
+    "vergabe-mcp": "index.js"
   },
   "scripts": {
     "postinstall": "node postinstall.js"

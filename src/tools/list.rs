@@ -1,31 +1,42 @@
 use crate::state::SharedState;
-use crate::types::ListReleasesParams;
+use crate::types::{ListReleasesParams, ListReleasesResponse};
 
 pub async fn list_releases(state: &SharedState, params: ListReleasesParams) -> String {
-    let mut query_parts: Vec<String> = Vec::new();
-
-    if let Some(ref v) = params.month {
-        query_parts.push(format!("month={v}"));
-    }
-    for (key, value) in params.filters.to_query_pairs() {
-        query_parts.push(format!("{key}={value}"));
-    }
+    let mut pairs: Vec<(&str, String)> = params.filters.to_query_pairs();
     if let Some(v) = params.limit {
-        query_parts.push(format!("limit={v}"));
+        pairs.push(("limit", v.to_string()));
     }
     if let Some(v) = params.offset {
-        query_parts.push(format!("offset={v}"));
+        pairs.push(("offset", v.to_string()));
     }
 
-    let query_string = if query_parts.is_empty() {
-        String::new()
+    let path = if pairs.is_empty() {
+        "/api/v1/releases".to_string()
     } else {
-        format!("?{}", query_parts.join("&"))
+        let qs: Vec<String> = pairs
+            .iter()
+            .map(|(k, v)| format!("{k}={}", urlencode(v)))
+            .collect();
+        format!("/api/v1/releases?{}", qs.join("&"))
     };
 
-    let path = format!("/releases{query_string}");
-    match super::api_get::<serde_json::Value>(state, &path).await {
-        Ok(json) => super::to_json_string(&json),
+    match super::api_get::<ListReleasesResponse>(state, &path).await {
+        Ok(resp) => super::to_json_string(&resp.releases),
         Err(e) => e,
     }
+}
+
+/// Minimal RFC3986 query-component encoding for filter values (CPV
+/// prefixes, buyer names, RFC3339 deadlines with `:` and `+`).
+fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
 }

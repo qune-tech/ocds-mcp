@@ -1,87 +1,54 @@
 use rmcp::schemars;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-// -- Tool parameter structs --
+// -- Filter taxonomy (mirrors the HTTP API `SearchFilters`) --
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-pub struct SearchTextParams {
-    #[schemars(description = "Text query to search for (German works best). The query is embedded locally and matched against tender chunks via cosine similarity.")]
-    pub query: String,
-    #[schemars(description = "Number of results to return (default: 10)")]
-    pub k: Option<usize>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-pub struct GetIndexInfoParams {}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-pub struct GetReleaseParams {
-    #[schemars(description = "The OCID (Open Contracting ID) of the release to retrieve")]
-    pub ocid: String,
-}
-
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-pub struct TenderFilterParams {
-    #[schemars(description = "Filter by CPV code prefix (e.g. '45' for construction, '72' for IT)")]
-    pub cpv_prefix: Option<String>,
-    #[schemars(
-        description = "Filter by main procurement category (e.g. 'works', 'goods', 'services')"
-    )]
-    pub main_procurement_category: Option<String>,
-    #[schemars(description = "Filter by procurement method (e.g. 'open', 'selective', 'limited')")]
-    pub procurement_method: Option<String>,
-    #[schemars(description = "Filter by tender status (e.g. 'active', 'complete', 'cancelled')")]
-    pub status: Option<String>,
-    #[schemars(description = "Minimum tender value")]
+/// Server-side filter taxonomy. Field names are verbatim copies of the
+/// HTTP API `SearchFilters` (see `docs/architecture/search-filters.md` in
+/// the backend). One struct serves all three filtered surfaces:
+/// `search_text` and `match_tenders` send it as the JSON `filters` object
+/// on the vector endpoints; `list_releases` flattens it into query params
+/// (with `procurement_method` as repeated params).
+#[derive(Debug, Default, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SearchFilters {
+    #[schemars(description = "Lifecycle phase: planning, open, closed, awarded, or unsuccessful.")]
+    pub phase: Option<String>,
+    #[schemars(description = "CPV code prefix, 2..8 digits (e.g. '45' for construction, '72' for IT services).")]
+    pub cpv_starts_with: Option<String>,
+    #[schemars(description = "ISO-3166 alpha-2 country code (e.g. 'DE').")]
+    pub country: Option<String>,
+    #[schemars(description = "Minimum estimated value in EUR.")]
     pub value_min: Option<f64>,
-    #[schemars(description = "Maximum tender value")]
+    #[schemars(description = "Maximum estimated value in EUR.")]
     pub value_max: Option<f64>,
-    #[schemars(description = "Filter by buyer name (case-insensitive substring match)")]
+    #[schemars(description = "Only tenders with a deadline on or after this RFC3339 datetime.")]
+    pub deadline_after: Option<chrono::DateTime<chrono::Utc>>,
+    #[schemars(description = "Only tenders with a deadline on or before this RFC3339 datetime.")]
+    pub deadline_before: Option<chrono::DateTime<chrono::Utc>>,
+    #[schemars(description = "Raw eForms procurement-procedure codes (e.g. 'de-open', 'neg-w-call'). Match-any.")]
+    pub procurement_method: Option<Vec<String>>,
+    #[schemars(description = "Main procurement category: goods, works, or services.")]
+    pub main_procurement_category: Option<String>,
+    #[schemars(description = "Buyer name. Exact match today; case-insensitive once the pending backend cutover deploys.")]
     pub buyer_name: Option<String>,
-    #[schemars(description = "Only include tenders with deadline on or before this ISO-8601 datetime")]
-    pub deadline_before: Option<String>,
-    #[schemars(description = "Only include tenders with deadline on or after this ISO-8601 datetime")]
-    pub deadline_after: Option<String>,
-    #[schemars(description = "Filter by lifecycle tag (e.g. 'tender', 'award', 'planning')")]
-    pub tag: Option<String>,
-    #[schemars(description = "Filter by whether the release has awards with suppliers (true/false)")]
-    pub has_awards: Option<bool>,
-    #[schemars(description = "Filter by EU funding status (true = EU funded)")]
-    pub eu_funded: Option<bool>,
-    #[schemars(description = "Filter by delivery location NUTS code prefix (e.g. 'DE3' for Berlin)")]
-    pub location_nuts: Option<String>,
+    #[schemars(description = "Data source (e.g. 'de').")]
+    pub data_source: Option<String>,
 }
 
-impl TenderFilterParams {
-    pub fn has_any(&self) -> bool {
-        self.cpv_prefix.is_some()
-            || self.main_procurement_category.is_some()
-            || self.procurement_method.is_some()
-            || self.status.is_some()
-            || self.value_min.is_some()
-            || self.value_max.is_some()
-            || self.buyer_name.is_some()
-            || self.deadline_before.is_some()
-            || self.deadline_after.is_some()
-            || self.tag.is_some()
-            || self.has_awards.is_some()
-            || self.eu_funded.is_some()
-            || self.location_nuts.is_some()
-    }
-
+impl SearchFilters {
+    /// Serialize to repeated query-string pairs for `GET /releases`.
+    /// `procurement_method` becomes one pair per code; deadlines are
+    /// emitted as RFC3339.
     pub fn to_query_pairs(&self) -> Vec<(&'static str, String)> {
         let mut pairs = Vec::new();
-        if let Some(ref v) = self.cpv_prefix {
-            pairs.push(("cpv_prefix", v.clone()));
+        if let Some(ref v) = self.phase {
+            pairs.push(("phase", v.clone()));
         }
-        if let Some(ref v) = self.main_procurement_category {
-            pairs.push(("main_procurement_category", v.clone()));
+        if let Some(ref v) = self.cpv_starts_with {
+            pairs.push(("cpv_starts_with", v.clone()));
         }
-        if let Some(ref v) = self.procurement_method {
-            pairs.push(("procurement_method", v.clone()));
-        }
-        if let Some(ref v) = self.status {
-            pairs.push(("status", v.clone()));
+        if let Some(ref v) = self.country {
+            pairs.push(("country", v.clone()));
         }
         if let Some(v) = self.value_min {
             pairs.push(("value_min", v.to_string()));
@@ -89,188 +56,225 @@ impl TenderFilterParams {
         if let Some(v) = self.value_max {
             pairs.push(("value_max", v.to_string()));
         }
+        if let Some(v) = self.deadline_after {
+            pairs.push(("deadline_after", v.to_rfc3339()));
+        }
+        if let Some(v) = self.deadline_before {
+            pairs.push(("deadline_before", v.to_rfc3339()));
+        }
+        if let Some(ref methods) = self.procurement_method {
+            for m in methods {
+                pairs.push(("procurement_method", m.clone()));
+            }
+        }
+        if let Some(ref v) = self.main_procurement_category {
+            pairs.push(("main_procurement_category", v.clone()));
+        }
         if let Some(ref v) = self.buyer_name {
             pairs.push(("buyer_name", v.clone()));
         }
-        if let Some(ref v) = self.deadline_before {
-            pairs.push(("deadline_before", v.clone()));
-        }
-        if let Some(ref v) = self.deadline_after {
-            pairs.push(("deadline_after", v.clone()));
-        }
-        if let Some(ref v) = self.tag {
-            pairs.push(("tag", v.clone()));
-        }
-        if let Some(v) = self.has_awards {
-            pairs.push(("has_awards", v.to_string()));
-        }
-        if let Some(v) = self.eu_funded {
-            pairs.push(("eu_funded", v.to_string()));
-        }
-        if let Some(ref v) = self.location_nuts {
-            pairs.push(("location_nuts", v.clone()));
+        if let Some(ref v) = self.data_source {
+            pairs.push(("data_source", v.clone()));
         }
         pairs
     }
 }
 
-/// Extended filter params for the list_releases tool (adds eForms-specific filters).
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-pub struct ListReleasesFilterParams {
-    #[serde(flatten)]
-    pub base: TenderFilterParams,
-    #[schemars(description = "Only include tenders with submission deadline on or before this ISO-8601 datetime")]
-    pub submission_deadline_before: Option<String>,
-    #[schemars(description = "Only include tenders with submission deadline on or after this ISO-8601 datetime")]
-    pub submission_deadline_after: Option<String>,
-    #[schemars(description = "Filter by result code (e.g. 'selec-w' for selected winner, 'clos-nw' for closed no winner)")]
-    pub result_code: Option<String>,
-    #[schemars(description = "Filter by NUTS code prefix (e.g. 'DE2' for Baden-Württemberg)")]
-    pub nuts_code: Option<String>,
+// -- Tool parameter structs --
+
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SearchTextParams {
+    #[schemars(description = "Text query to search for (German works best). The query is embedded locally with the e5 'query: ' prefix and only the resulting 384-float vector is sent to the API.")]
+    pub query: String,
+    #[schemars(description = "Number of results to return (default 10, max 100).")]
+    pub k: Option<usize>,
+    #[serde(default)]
+    #[schemars(description = "Optional server-side filters narrowing the result set.")]
+    pub filters: Option<SearchFilters>,
 }
 
-impl ListReleasesFilterParams {
-    pub fn to_query_pairs(&self) -> Vec<(&'static str, String)> {
-        let mut pairs = self.base.to_query_pairs();
-        if let Some(ref v) = self.submission_deadline_before {
-            pairs.push(("submission_deadline_before", v.clone()));
-        }
-        if let Some(ref v) = self.submission_deadline_after {
-            pairs.push(("submission_deadline_after", v.clone()));
-        }
-        if let Some(ref v) = self.result_code {
-            pairs.push(("result_code", v.clone()));
-        }
-        if let Some(ref v) = self.nuts_code {
-            pairs.push(("nuts_code", v.clone()));
-        }
-        pairs
-    }
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct GetIndexInfoParams {}
+
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct GetReleaseParams {
+    #[schemars(description = "The OCID (Open Contracting ID) of the release to retrieve.")]
+    pub ocid: String,
+    #[serde(default)]
+    #[schemars(description = "Optional: fetch a specific notice of this OCID (EU siblings share one OCID). Use a notice_id from linked_notices to address an older sibling; absent fetches the latest notice.")]
+    pub notice_id: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct LinkedNoticesParams {
+    #[schemars(description = "The OCID (Open Contracting ID) whose notice lineage to retrieve.")]
+    pub ocid: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ListReleasesParams {
-    #[schemars(description = "Filter by month in YYYY-MM format")]
-    pub month: Option<String>,
     #[serde(flatten)]
-    pub filters: ListReleasesFilterParams,
-    #[schemars(description = "Maximum number of results (default 20, max 200)")]
+    pub filters: SearchFilters,
+    #[schemars(description = "Maximum number of results (default 20, max 200).")]
     pub limit: Option<usize>,
-    #[schemars(description = "Offset for pagination (default 0)")]
+    #[schemars(description = "Offset for pagination (default 0).")]
     pub offset: Option<usize>,
 }
 
 // -- Company profile param structs --
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CreateCompanyProfileParams {
-    #[schemars(description = "Company name")]
+    #[schemars(description = "Company name.")]
     pub name: String,
-    #[schemars(description = "Description of the company's activities, products, and services. German text recommended for best matching quality.")]
+    #[schemars(description = "Description of the company's activities, products, and services. German text recommended for best matching quality. Embedded locally; never sent to the API.")]
     pub description: String,
-    #[schemars(description = "CPV codes the company is interested in (e.g. ['45000000', '72000000'])")]
+    #[schemars(description = "CPV codes the company is interested in (e.g. ['45000000', '72000000']).")]
     pub cpv_codes: Option<Vec<String>>,
-    #[schemars(description = "Procurement categories of interest (e.g. ['works', 'services', 'goods'])")]
+    #[schemars(description = "Procurement categories of interest (e.g. ['works', 'services', 'goods']).")]
     pub categories: Option<Vec<String>>,
-    #[schemars(description = "Company location (e.g. 'Berlin, Germany')")]
+    #[schemars(description = "Company location (e.g. 'Berlin, Germany').")]
     pub location: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct GetCompanyProfileParams {
-    #[schemars(description = "The UUID of the company profile to retrieve")]
+    #[schemars(description = "The UUID of the company profile to retrieve.")]
     pub id: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ListCompanyProfilesParams {}
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct UpdateCompanyProfileParams {
-    #[schemars(description = "The UUID of the company profile to update")]
+    #[schemars(description = "The UUID of the company profile to update.")]
     pub id: String,
-    #[schemars(description = "New company name")]
+    #[schemars(description = "New company name.")]
     pub name: Option<String>,
-    #[schemars(description = "New description")]
+    #[schemars(description = "New description. Re-embedded locally on change.")]
     pub description: Option<String>,
-    #[schemars(description = "New CPV codes (replaces existing)")]
+    #[schemars(description = "New CPV codes (replaces existing).")]
     pub cpv_codes: Option<Vec<String>>,
-    #[schemars(description = "New procurement categories (replaces existing)")]
+    #[schemars(description = "New procurement categories (replaces existing).")]
     pub categories: Option<Vec<String>>,
     #[schemars(description = "New location. Use empty string to clear.")]
     pub location: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DeleteCompanyProfileParams {
-    #[schemars(description = "The UUID of the company profile to delete")]
+    #[schemars(description = "The UUID of the company profile to delete.")]
     pub id: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MatchTendersParams {
-    #[schemars(description = "The UUID of the company profile to match against tenders")]
+    #[schemars(description = "The UUID of the company profile to match against tenders.")]
     pub profile_id: String,
-    #[schemars(description = "Number of matching tenders to return (default: 10)")]
+    #[schemars(description = "Number of matching tenders to return (default 10, max 100).")]
     pub k: Option<usize>,
-    #[serde(flatten)]
-    pub filters: TenderFilterParams,
+    #[serde(default)]
+    #[schemars(description = "Optional server-side filters narrowing the matches.")]
+    pub filters: Option<SearchFilters>,
 }
 
-// -- Result types --
+// -- API response types (deserialized from /api/v1) --
 
-/// KNN search result deserialized from the REST API `POST /search` response.
-#[derive(Debug, Clone, serde::Deserialize)]
-pub struct ApiSearchResult {
-    pub doc_id: String,
-    pub ocid: String,
-    pub chunk_type: String,
-    pub text: String,
-    pub cpv_codes: Vec<String>,
-    pub score: f32,
-}
-
-/// Formatted search result returned to the LLM.
-#[derive(Debug, Serialize)]
+/// One row of `/search/vector`, `/match/vector`, and `/releases` output.
+/// Mirrors the backend `SearchResult` shape.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
-    pub rank: usize,
-    pub id: String,
     pub ocid: String,
-    pub chunk_type: String,
-    pub text: String,
-    pub cpv_codes: Vec<String>,
-    pub score: f32,
-}
-
-/// Enriched tender match result from profile-based KNN search.
-#[derive(Debug, Clone, Serialize)]
-pub struct TenderMatch {
-    pub rank: usize,
-    pub doc_id: String,
-    pub ocid: String,
-    pub url: Option<String>,
-    pub chunk_type: String,
-    pub text: String,
-    pub cpv_codes: Vec<String>,
-    pub score: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<f32>,
     pub title: Option<String>,
     pub buyer_name: Option<String>,
     pub procurement_method: Option<String>,
     pub main_procurement_category: Option<String>,
     pub value_amount: Option<f64>,
     pub value_currency: Option<String>,
-    pub deadline: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency_eur_amount: Option<f64>,
+    pub deadline: Option<chrono::DateTime<chrono::Utc>>,
+    pub award_date: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
+    pub cpv_codes: Vec<String>,
+    pub phase: String,
     pub documents_url: Option<String>,
+    pub data_source: String,
+    pub country: Option<String>,
 }
 
+/// `{ "results": [...] }` — the body of `/search/vector` and `/match/vector`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SearchTextResponse {
+    pub results: Vec<SearchResult>,
+}
+
+/// `{ "releases": [...] }` — the body of `GET /releases`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListReleasesResponse {
+    pub releases: Vec<SearchResult>,
+}
+
+/// `GET /releases/:ocid` envelope: per-row metadata + the raw eForms XML.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReleaseDetailResponse {
+    pub ocid: String,
+    pub notice_id: String,
+    pub data_source: String,
+    pub country: Option<String>,
+    pub raw_xml: String,
+}
+
+/// One notice's identity within a linked set.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoticeRef {
+    pub ocid: String,
+    pub notice_id: String,
+}
+
+/// `GET /releases/:ocid/linked` envelope.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinkedNoticesResponse {
+    pub key: String,
+    pub notices: Vec<NoticeRef>,
+}
+
+/// `GET /api/v1/version`. `embedding_model` / `embedding_contract` are
+/// part of the vector-API contract and may be absent on backends that
+/// predate the vector-endpoint deploy.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiVersion {
+    pub store: Option<String>,
+    pub web: Option<String>,
+    pub embedding_model: Option<String>,
+    pub embedding_contract: Option<u32>,
+}
+
+/// `GET /api/v1/health`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiHealth {
+    pub status: String,
+}
+
+/// Reported by `get_index_info`: the local client's embedding contract,
+/// the server's, and whether they match.
 #[derive(Debug, Serialize)]
 pub struct IndexInfo {
-    pub embedder_loaded: bool,
     pub api_url: String,
-    pub api_release_count: usize,
-    pub api_embedding_count: usize,
-    pub dimension: usize,
+    pub api_status: String,
+    pub api_store_version: Option<String>,
+    pub api_web_version: Option<String>,
+    pub embedder_loaded: bool,
+    pub client_embedding_model: &'static str,
+    pub client_embedding_contract: u32,
+    pub client_embedding_dim: usize,
+    pub server_embedding_model: Option<String>,
+    pub server_embedding_contract: Option<u32>,
+    /// `Some(true)` / `Some(false)` when the server advertises its contract;
+    /// `None` when the server does not expose the embedding fields yet.
+    pub contract_match: Option<bool>,
     pub company_profile_count: usize,
     pub unembedded_profile_count: usize,
 }

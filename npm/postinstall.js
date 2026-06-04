@@ -8,24 +8,24 @@ const { execSync } = require("child_process");
 const os = require("os");
 
 const VERSION = require("./package.json").version;
-const REPO = "qune-tech/ocds-mcp";
+const REPO = "qune-tech/vergabe-mcp";
 const BASE_URL = `https://github.com/${REPO}/releases/download/v${VERSION}`;
 
 const PLATFORMS = {
   "linux-x64": {
-    asset: "ocds-mcp-linux-x86_64.tar.gz",
-    extracted: "ocds-mcp-linux-x86_64",
-    binary: "ocds-mcp",
+    asset: "vergabe-mcp-linux-x86_64.tar.gz",
+    extracted: "vergabe-mcp-linux-x86_64",
+    binary: "vergabe-mcp",
   },
   "darwin-arm64": {
-    asset: "ocds-mcp-macos-arm64.tar.gz",
-    extracted: "ocds-mcp-macos-arm64",
-    binary: "ocds-mcp",
+    asset: "vergabe-mcp-macos-arm64.tar.gz",
+    extracted: "vergabe-mcp-macos-arm64",
+    binary: "vergabe-mcp",
   },
   "win32-x64": {
-    asset: "ocds-mcp-windows-x86_64.zip",
-    extracted: "ocds-mcp-windows-x86_64.exe",
-    binary: "ocds-mcp.exe",
+    asset: "vergabe-mcp-windows-x86_64.zip",
+    extracted: "vergabe-mcp-windows-x86_64.exe",
+    binary: "vergabe-mcp.exe",
   },
 };
 
@@ -97,19 +97,19 @@ async function main() {
 
   // Skip download if binary already exists (cached)
   if (fs.existsSync(binaryPath)) {
-    console.log(`ocds-mcp binary already exists at ${binaryPath}`);
+    console.log(`vergabe-mcp binary already exists at ${binaryPath}`);
     return;
   }
 
   const url = `${BASE_URL}/${info.asset}`;
-  console.log(`Downloading ocds-mcp v${VERSION} for ${key}...`);
+  console.log(`Downloading vergabe-mcp v${VERSION} for ${key}...`);
   console.log(`  ${url}`);
 
   let buffer;
   try {
     buffer = await download(url);
   } catch (err) {
-    console.error(`Failed to download ocds-mcp binary: ${err.message}`);
+    console.error(`Failed to download vergabe-mcp binary: ${err.message}`);
     console.error(
       `\nYou can download it manually from:\n  https://github.com/${REPO}/releases/tag/v${VERSION}`
     );
@@ -143,7 +143,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`ocds-mcp v${VERSION} installed to ${binaryPath}`);
+  console.log(`vergabe-mcp v${VERSION} installed to ${binaryPath}`);
 }
 
 main();
