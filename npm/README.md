@@ -6,6 +6,8 @@ Local MCP server for German public procurement search. Connects your AI assistan
 
 Your queries and company profiles never leave your machine — they are embedded locally and only the resulting vectors are sent. Data minimisation by design.
 
+> New to German public procurement? The [Vergabe Dashboard knowledge base](https://vergabe-dashboard.qune.de/wissen/) explains eForms, EU thresholds, and the tender lifecycle, and [KI für Vergabe](https://vergabe-dashboard.qune.de/ki-vergabe/) covers the hosted AI side of this server.
+
 ## Quick Start
 
 ```bash
@@ -69,7 +71,7 @@ Settings > MCP > Add Server (STDIO):
 |------|-------------|
 | `search_text` | Semantic search across all tenders (query embedded locally) |
 | `list_releases` | Filter and browse tenders by phase, CPV prefix, country, value range, deadline, buyer, procurement method |
-| `get_release` | Raw eForms XML envelope for one OCID (optional `notice_id` selects a sibling) |
+| `get_release` | Raw [eForms](https://vergabe-dashboard.qune.de/wissen/eforms/) XML envelope for one OCID (optional `notice_id` selects a sibling) |
 | `linked_notices` | A procurement's notice lineage (PIN→CN→CAN) as `{ocid, notice_id}` refs |
 | `get_index_info` | API health/version, embedder status, and embedding-contract check |
 | `create_company_profile` | Create a matching profile for your company (stored locally) |
