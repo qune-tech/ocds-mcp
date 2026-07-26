@@ -6,6 +6,8 @@ Local MCP server for German public procurement search. Connects your AI assistan
 
 Your queries and company profiles never leave your machine — they are embedded locally and only the resulting vectors are sent. Data minimisation by design.
 
+> **Hosted alternative:** if you just want search from your AI assistant, there is a hosted MCP connector (OAuth sign-in, no installation) — see the [setup guide](https://vergabe-dashboard.qune.de/ki-vergabe/einrichtung). This local server is for running the client in your own environment: queries and profiles are embedded locally, only vectors and filter values leave the machine, and it unlocks API-key features.
+
 > New to German public procurement? The [Vergabe Dashboard knowledge base](https://vergabe-dashboard.qune.de/wissen/) explains eForms, EU thresholds, and the tender lifecycle, and [KI für Vergabe](https://vergabe-dashboard.qune.de/ki-vergabe/) covers the hosted AI side of this server.
 
 ## Quick Start
@@ -16,7 +18,7 @@ npx @qune-tech/vergabe-mcp --api-key sk_live_YOUR_KEY_HERE
 
 ### Get an API key
 
-Sign up at [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) and create an API key. API keys require an active **Enterprise plan**.
+Sign up at [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) and create an API key. API keys require an active **Pro plan** (€99/month).
 
 ## Configure your AI client
 
@@ -106,7 +108,7 @@ LLM <--stdio--> vergabe-mcp (local binary)
 
 ## Requirements
 
-- An API key from [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) on an Enterprise plan
+- An API key from [vergabe-dashboard.qune.de](https://vergabe-dashboard.qune.de) on the Pro plan (€99/month)
 - ~120 MB disk space for the ONNX model (auto-downloaded on first run)
 - Internet connection to reach the API
 
